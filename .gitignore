@@ -219,3 +219,9 @@ __marimo__/
 
 # Plant Village Dataset
 dataset/
+
+# Results
+results/
+
+# Models
+models/
