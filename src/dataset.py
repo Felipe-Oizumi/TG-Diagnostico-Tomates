@@ -3,6 +3,9 @@ from sklearn.model_selection import train_test_split
 from collections import Counter
 import random
 
+
+# CONFIGURAÇÕES
+
 DATASET_DIR = Path("dataset/Tomato")
 
 SEED = 42
@@ -17,6 +20,9 @@ TRAINING_PERCENTAGES = [
     1.00
 ]
 
+
+# IDENTIFICAR CLASSES
+
 class_names = sorted([
     folder.name
     for folder in DATASET_DIR.iterdir()
@@ -28,6 +34,9 @@ class_to_index = {
     class_name: index
     for index, class_name in enumerate(class_names)
 }
+
+
+# ENCONTRAR IMAGENS
 
 image_paths = []
 labels = []
@@ -45,78 +54,53 @@ for class_name in class_names:
             ".png"
         ]:
 
-            image_paths.append(str(image_path))
-            labels.append(class_to_index[class_name])
+            image_paths.append(
+                str(image_path)
+            )
 
-print("Classes:")
+            labels.append(
+                class_to_index[class_name]
+            )
 
-for class_name, index in class_to_index.items():
-    print(f"{index}: {class_name}")
 
-print(f"Total de imagens: {len(image_paths)}")
+# TREINO / VALIDAÇÃO / TESTE
 
-train_paths, temp_paths, train_labels, temp_labels = train_test_split(
-    image_paths,
-    labels,
-    train_size=TRAIN_PERCENTAGE,
-    random_state=SEED,
-    stratify=labels
+train_paths, temp_paths, train_labels, temp_labels = (
+    train_test_split(
+        image_paths,
+        labels,
+        train_size=TRAIN_PERCENTAGE,
+        random_state=SEED,
+        stratify=labels
+    )
 )
 
-validation_paths, test_paths, validation_labels, test_labels = train_test_split(
-    temp_paths,
-    temp_labels,
-    test_size=0.50,
-    random_state=SEED,
-    stratify=temp_labels
+
+validation_paths, test_paths, validation_labels, test_labels = (
+    train_test_split(
+        temp_paths,
+        temp_labels,
+        test_size=0.50,
+        random_state=SEED,
+        stratify=temp_labels
+    )
 )
 
-print("========================================")
 
-print(f"Treinamento: {len(train_paths)}")
-print(f"Validação:   {len(validation_paths)}")
-print(f"Teste:       {len(test_paths)}")
-
-def show_class_distribution(name, dataset_labels):
-
-    counter = Counter(dataset_labels)
-
-    print(name)
-
-    for class_index, class_name in enumerate(class_names):
-
-        quantity = counter[class_index]
-
-        print(
-            f"  {class_name}: {quantity}"
-        )
-
-show_class_distribution(
-    "Distribuição do treinamento:",
-    train_labels
-)
-
-show_class_distribution(
-    "Distribuição da validação:",
-    validation_labels
-)
-
-show_class_distribution(
-    "Distribuição do teste:",
-    test_labels
-)
+# ORGANIZAR TREINO POR CLASSE
 
 class_data = {}
+
 
 for class_index in range(len(class_names)):
 
     paths = [
         path
-        for path, label in zip(train_paths, train_labels)
+        for path, label
+        in zip(train_paths, train_labels)
         if label == class_index
     ]
 
-    # Embaralhamento determinístico
     random.Random(
         SEED + class_index
     ).shuffle(paths)
@@ -124,17 +108,19 @@ for class_index in range(len(class_names)):
     class_data[class_index] = paths
 
 
+# SUBCONJUNTOS DE TREINAMENTO
+
 training_subsets = {}
 
-print("========================================")
 
 for percentage in TRAINING_PERCENTAGES:
 
     subset_paths = []
     subset_labels = []
 
-
-    for class_index in range(len(class_names)):
+    for class_index in range(
+        len(class_names)
+    ):
 
         paths = class_data[class_index]
 
@@ -142,14 +128,18 @@ for percentage in TRAINING_PERCENTAGES:
             len(paths) * percentage
         )
 
-        selected_paths = paths[:quantity]
-
-        subset_paths.extend(selected_paths)
-
-        subset_labels.extend(
-            [class_index] * len(selected_paths)
+        selected_paths = (
+            paths[:quantity]
         )
 
+        subset_paths.extend(
+            selected_paths
+        )
+
+        subset_labels.extend(
+            [class_index]
+            * len(selected_paths)
+        )
 
     training_subsets[percentage] = (
         subset_paths,
@@ -157,15 +147,75 @@ for percentage in TRAINING_PERCENTAGES:
     )
 
 
+# FUNÇÃO APENAS PARA INSPEÇÃO
+
+def show_class_distribution(
+    name,
+    dataset_labels
+):
+
+    counter = Counter(
+        dataset_labels
+    )
+
+    print()
+    print(name)
+
+    for class_index, class_name in enumerate(
+        class_names
+    ):
+
+        print(
+            f"{class_name}: "
+            f"{counter[class_index]}"
+        )
+
+
+# EXECUTAR DIRETAMENTE
+
+if __name__ == "__main__":
+
+    print("Classes:")
+
+    for class_name, index in (
+        class_to_index.items()
+    ):
+        print(
+            f"{index}: {class_name}"
+        )
+
+    print()
     print(
-        f"Treinamento {percentage * 100:.0f}%:"
+        f"Total: {len(image_paths)}"
     )
 
     print(
-        f"  Total: {len(subset_paths)} imagens"
+        f"Treinamento: "
+        f"{len(train_paths)}"
     )
 
-    show_class_distribution(
-        "  Classes:",
+    print(
+        f"Validação: "
+        f"{len(validation_paths)}"
+    )
+
+    print(
+        f"Teste: "
+        f"{len(test_paths)}"
+    )
+
+    for percentage, (
+        paths,
         subset_labels
-    )
+    ) in training_subsets.items():
+
+        print()
+        print(
+            f"{percentage * 100:.0f}%: "
+            f"{len(paths)} imagens"
+        )
+
+        show_class_distribution(
+            "Distribuição:",
+            subset_labels
+        )
